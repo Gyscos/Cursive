@@ -830,16 +830,25 @@ impl Cursive {
         }
 
         if self.menubar.receive_events() {
-            self.menubar.on_event(event).process(self);
-        } else {
-            let offset = if self.menubar.autohide { 0 } else { 1 };
-
-            let result =
-                View::on_event(&mut self.root, event.relativized((0, offset)));
+            let result = self.menubar.on_event(event.clone());
 
             if let EventResult::Consumed(Some(cb)) = result {
                 cb(self);
+                // If the menubar handles this event, we return
+                // early so the event isn't handled twice. Otherwise
+                // the event should bubble up, even if the menubar is
+                // active, to ensure global callbacks are called.
+                return;
             }
+        }
+
+        let offset = if self.menubar.autohide { 0 } else { 1 };
+
+        let result =
+            View::on_event(&mut self.root, event.relativized((0, offset)));
+
+        if let EventResult::Consumed(Some(cb)) = result {
+            cb(self);
         }
     }
 
